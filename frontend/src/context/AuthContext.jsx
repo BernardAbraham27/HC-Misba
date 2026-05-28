@@ -1,5 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getCurrentUser, loginUser, registerUser } from "../services/authService";
+import {
+  adminLoginUser,
+  getCurrentUser,
+  loginUser,
+  registerUser,
+} from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -68,6 +73,17 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const adminLogin = async (credentials) => {
+    setLoading(true);
+    try {
+      const auth = await adminLoginUser(credentials);
+      applyAuth(auth);
+      return auth;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const register = async (payload) => {
     setLoading(true);
     try {
@@ -124,6 +140,7 @@ export function AuthProvider({ children }) {
       isAdmin: role === "Admin",
       isCustomer: role === "Customer",
       login,
+      adminLogin,
       register,
       logout,
       getProfile,

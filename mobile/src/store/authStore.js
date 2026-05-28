@@ -25,7 +25,8 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [role, setRole] = useState(null);
   const [isGuest, setIsGuest] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function AuthProvider({ children }) {
   }
 
   async function loadCurrentUser() {
-    setIsLoading(true);
+    setIsBootstrapping(true);
     setError(null);
 
     try {
@@ -90,12 +91,12 @@ export function AuthProvider({ children }) {
       await clearAuth();
       setError(loadError.message || "Unable to restore your session.");
     } finally {
-      setIsLoading(false);
+      setIsBootstrapping(false);
     }
   }
 
   async function login(emailOrMobile, password) {
-    setIsLoading(true);
+    setIsAuthenticating(true);
     setError(null);
 
     try {
@@ -118,12 +119,12 @@ export function AuthProvider({ children }) {
       setError(message);
       throw new Error(message);
     } finally {
-      setIsLoading(false);
+      setIsAuthenticating(false);
     }
   }
 
   async function register(data) {
-    setIsLoading(true);
+    setIsAuthenticating(true);
     setError(null);
 
     try {
@@ -146,12 +147,12 @@ export function AuthProvider({ children }) {
       setError(message);
       throw new Error(message);
     } finally {
-      setIsLoading(false);
+      setIsAuthenticating(false);
     }
   }
 
   async function adminLogin(email, password) {
-    setIsLoading(true);
+    setIsAuthenticating(true);
     setError(null);
 
     try {
@@ -174,7 +175,7 @@ export function AuthProvider({ children }) {
       setError(message);
       throw new Error(message);
     } finally {
-      setIsLoading(false);
+      setIsAuthenticating(false);
     }
   }
 
@@ -205,7 +206,9 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(token && user),
       isAdmin: role === "Admin",
       isCustomer: role === "Customer",
-      isLoading,
+      isLoading: isBootstrapping,
+      isBootstrapping,
+      isAuthenticating,
       error,
       loadCurrentUser,
       login,
@@ -215,7 +218,7 @@ export function AuthProvider({ children }) {
       clearAuth,
       continueAsGuest,
     }),
-    [error, isGuest, isLoading, role, token, user],
+    [error, isAuthenticating, isBootstrapping, isGuest, role, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

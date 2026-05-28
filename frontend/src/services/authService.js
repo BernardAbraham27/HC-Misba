@@ -24,6 +24,14 @@ export async function loginUser(credentials) {
   return normalizeAuthResponse(data);
 }
 
+export async function adminLoginUser(credentials) {
+  const data = await apiRequest("/api/auth/admin-login", {
+    method: "POST",
+    body: credentials,
+  });
+  return normalizeAuthResponse(data);
+}
+
 export async function registerUser(payload) {
   const data = await apiRequest("/api/auth/register", {
     method: "POST",

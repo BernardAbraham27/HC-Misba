@@ -40,9 +40,9 @@ function LaunchingScreen() {
 }
 
 export default function AppNavigator() {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isBootstrapping } = useAuth();
 
-  if (isLoading) {
+  if (isBootstrapping) {
     return <LaunchingScreen />;
   }
 

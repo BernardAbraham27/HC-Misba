@@ -157,7 +157,7 @@ function useAdminDocumentTitle(title) {
 }
 
 export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToast }) {
-  const { isAdmin, isAuthenticated, loading: authLoading, login, logout, token, user } = useAuth();
+  const { isAdmin, isAuthenticated, loading: authLoading, adminLogin, logout, token, user } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -185,6 +185,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
   const [couponForm, setCouponForm] = useState(EMPTY_COUPON_FORM);
   const [stockForm, setStockForm] = useState({ productId: "", quantityChange: "", remarks: "" });
   const [selectedHistoryProduct, setSelectedHistoryProduct] = useState("");
+  const [activeModal, setActiveModal] = useState(null);
 
   const activePath =
     pathname === "/admin" ? "/admin/dashboard" : pathname.replace(/\/$/, "");
@@ -235,6 +236,44 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
     logout();
     onNavigate("/admin/login", { replace: true });
     showToast("success", "Admin session signed out.");
+  };
+
+  const closeModal = () => {
+    setActiveModal(null);
+  };
+
+  const openProductCreate = () => {
+    setEditingProduct(null);
+    setProductForm({
+      ...EMPTY_PRODUCT_FORM,
+      brandId: brands.find((brand) => brand.isOwnBrand)?.id
+        ? String(brands.find((brand) => brand.isOwnBrand)?.id)
+        : "",
+    });
+    setActiveModal("product");
+  };
+
+  const openBrandCreate = () => {
+    setEditingBrand(null);
+    setBrandForm(EMPTY_BRAND_FORM);
+    setActiveModal("brand");
+  };
+
+  const openCategoryCreate = () => {
+    setEditingCategory(null);
+    setCategoryForm(EMPTY_CATEGORY_FORM);
+    setActiveModal("category");
+  };
+
+  const openCouponCreate = () => {
+    setEditingCoupon(null);
+    setCouponForm(EMPTY_COUPON_FORM);
+    setActiveModal("coupon");
+  };
+
+  const openInventoryAdjustment = () => {
+    setStockForm({ productId: "", quantityChange: "", remarks: "" });
+    setActiveModal("inventory");
   };
 
   const withAsync = async (task, successMessage) => {
@@ -356,7 +395,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
 
   const handleLogin = async (credentials) => {
     await withAsync(async () => {
-      const data = await login(credentials);
+      const data = await adminLogin(credentials);
       if (data.role !== "Admin") {
         logout();
         throw new Error("This account does not have admin access.");
@@ -385,6 +424,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       }
       setEditingProduct(null);
       setProductForm(EMPTY_PRODUCT_FORM);
+      closeModal();
       await loadProducts();
     }, editingProduct ? "Product updated successfully." : "Product created successfully.");
   };
@@ -416,6 +456,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       }
       setEditingBrand(null);
       setBrandForm(EMPTY_BRAND_FORM);
+      closeModal();
       await loadBrands();
     }, editingBrand ? "Brand updated successfully." : "Brand created successfully.");
   };
@@ -447,6 +488,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       }
       setEditingCategory(null);
       setCategoryForm(EMPTY_CATEGORY_FORM);
+      closeModal();
       await loadCategories();
     }, editingCategory ? "Category updated successfully." : "Category created successfully.");
   };
@@ -478,6 +520,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       }
       setEditingCoupon(null);
       setCouponForm(EMPTY_COUPON_FORM);
+      closeModal();
       const data = await apiRequest("/api/coupons", { token });
       setCoupons(data || []);
     }, editingCoupon ? "Coupon updated successfully." : "Coupon created successfully.");
@@ -547,6 +590,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
         },
       });
       setStockForm({ productId: "", quantityChange: "", remarks: "" });
+      closeModal();
       await Promise.all([loadProducts(), loadLowStock()]);
       if (selectedHistoryProduct) {
         await loadInventoryHistory(selectedHistoryProduct);
@@ -614,6 +658,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       howToUse: product.howToUse,
       safetyInstructions: product.safetyInstructions,
     });
+    setActiveModal("product");
   };
 
   const startEditBrand = (brand) => {
@@ -626,6 +671,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       isOwnBrand: brand.isOwnBrand,
       isActive: brand.isActive,
     });
+    setActiveModal("brand");
   };
 
   const startEditCategory = (category) => {
@@ -636,6 +682,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       imageUrl: category.imageUrl || "https://placehold.co/600x400?text=God+Grace+Category",
       isActive: category.isActive,
     });
+    setActiveModal("category");
   };
 
   const startEditCoupon = (coupon) => {
@@ -648,6 +695,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
       expiryDate: new Date(coupon.expiryDate).toISOString().slice(0, 10),
       isActive: coupon.isActive,
     });
+    setActiveModal("coupon");
   };
 
   if (pathname === "/admin/login" || !token) {
@@ -792,9 +840,12 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
                 categories={categories}
                 editingProduct={editingProduct}
                 form={productForm}
+                isModalOpen={activeModal === "product"}
                 loading={loading}
                 productsData={productsData}
                 query={productQuery}
+                onCloseModal={closeModal}
+                onCreate={openProductCreate}
                 onDelete={handleDeleteProduct}
                 onEdit={startEditProduct}
                 onFormChange={setProductForm}
@@ -803,6 +854,7 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
                 onReset={() => {
                   setEditingProduct(null);
                   setProductForm(EMPTY_PRODUCT_FORM);
+                  closeModal();
                 }}
                 onSubmit={handleProductSubmit}
               />
@@ -813,13 +865,17 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
                 brands={brands}
                 editingBrand={editingBrand}
                 form={brandForm}
+                isModalOpen={activeModal === "brand"}
                 loading={loading}
+                onCloseModal={closeModal}
+                onCreate={openBrandCreate}
                 onDelete={handleDeleteBrand}
                 onEdit={startEditBrand}
                 onFormChange={setBrandForm}
                 onReset={() => {
                   setEditingBrand(null);
                   setBrandForm(EMPTY_BRAND_FORM);
+                  closeModal();
                 }}
                 onSubmit={handleBrandSubmit}
               />
@@ -830,13 +886,17 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
                 categories={categories}
                 editingCategory={editingCategory}
                 form={categoryForm}
+                isModalOpen={activeModal === "category"}
                 loading={loading}
+                onCloseModal={closeModal}
+                onCreate={openCategoryCreate}
                 onDelete={handleDeleteCategory}
                 onEdit={startEditCategory}
                 onFormChange={setCategoryForm}
                 onReset={() => {
                   setEditingCategory(null);
                   setCategoryForm(EMPTY_CATEGORY_FORM);
+                  closeModal();
                 }}
                 onSubmit={handleCategorySubmit}
               />
@@ -866,13 +926,17 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
                 coupons={coupons}
                 editingCoupon={editingCoupon}
                 form={couponForm}
+                isModalOpen={activeModal === "coupon"}
                 loading={loading}
+                onCloseModal={closeModal}
+                onCreate={openCouponCreate}
                 onDelete={handleDeleteCoupon}
                 onEdit={startEditCoupon}
                 onFormChange={setCouponForm}
                 onReset={() => {
                   setEditingCoupon(null);
                   setCouponForm(EMPTY_COUPON_FORM);
+                  closeModal();
                 }}
                 onSubmit={handleCouponSubmit}
               />
@@ -881,9 +945,12 @@ export default function AdminApp({ pathname, onNavigate, setToast: setGlobalToas
             {activePath === "/admin/inventory" ? (
               <InventoryPage
                 history={inventoryHistory}
+                isModalOpen={activeModal === "inventory"}
                 loading={loading}
                 lowStock={lowStock}
+                onCloseModal={closeModal}
                 products={productsData.items}
+                onOpenAdjustment={openInventoryAdjustment}
                 selectedHistoryProduct={selectedHistoryProduct}
                 stockForm={stockForm}
                 onFormChange={setStockForm}
@@ -1148,9 +1215,12 @@ function ProductsPage({
   categories,
   editingProduct,
   form,
+  isModalOpen,
   loading,
   productsData,
   query,
+  onCloseModal,
+  onCreate,
   onDelete,
   onEdit,
   onFormChange,
@@ -1160,7 +1230,7 @@ function ProductsPage({
   onSubmit,
 }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+    <div className="space-y-6">
       <Card
         title="Product Management"
         description="Create, update, search, and maintain your full product catalog."
@@ -1185,6 +1255,13 @@ function ProductsPage({
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
             >
               Refresh
+            </button>
+            <button
+              type="button"
+              onClick={onCreate}
+              className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
+            >
+              Add Product
             </button>
           </div>
         }
@@ -1254,9 +1331,11 @@ function ProductsPage({
         </div>
       </Card>
 
-      <Card
+      <ModalShell
+        open={isModalOpen}
         title={editingProduct ? "Edit Product" : "Add Product"}
         description="Maintain pricing, stock, descriptions, and merchandising flags."
+        onClose={onCloseModal}
       >
         <form className="space-y-4" onSubmit={onSubmit}>
           <Field label="Product Name">
@@ -1318,124 +1397,50 @@ function ProductsPage({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Price">
-              <input
-                type="number"
-                step="0.01"
-                className="admin-input"
-                value={form.price}
-                onChange={(event) => onFormChange({ ...form, price: event.target.value })}
-                required
-              />
+              <input type="number" step="0.01" className="admin-input" value={form.price} onChange={(event) => onFormChange({ ...form, price: event.target.value })} required />
             </Field>
             <Field label="Discount Price">
-              <input
-                type="number"
-                step="0.01"
-                className="admin-input"
-                value={form.discountPrice}
-                onChange={(event) =>
-                  onFormChange({ ...form, discountPrice: event.target.value })
-                }
-              />
+              <input type="number" step="0.01" className="admin-input" value={form.discountPrice} onChange={(event) => onFormChange({ ...form, discountPrice: event.target.value })} />
             </Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Stock Quantity">
-              <input
-                type="number"
-                className="admin-input"
-                value={form.stockQuantity}
-                onChange={(event) =>
-                  onFormChange({ ...form, stockQuantity: event.target.value })
-                }
-                required
-              />
+              <input type="number" className="admin-input" value={form.stockQuantity} onChange={(event) => onFormChange({ ...form, stockQuantity: event.target.value })} required />
             </Field>
             <Field label="Rating">
-              <input
-                type="number"
-                step="0.1"
-                className="admin-input"
-                value={form.rating}
-                onChange={(event) => onFormChange({ ...form, rating: event.target.value })}
-              />
+              <input type="number" step="0.1" className="admin-input" value={form.rating} onChange={(event) => onFormChange({ ...form, rating: event.target.value })} />
             </Field>
           </div>
           <Field label="Image URL">
-            <input
-              className="admin-input"
-              value={form.imageUrl}
-              onChange={(event) => onFormChange({ ...form, imageUrl: event.target.value })}
-              required
-            />
+            <input className="admin-input" value={form.imageUrl} onChange={(event) => onFormChange({ ...form, imageUrl: event.target.value })} required />
           </Field>
           <Field label="Sizes (comma separated)">
-            <input
-              className="admin-input"
-              value={form.sizes}
-              onChange={(event) => onFormChange({ ...form, sizes: event.target.value })}
-            />
+            <input className="admin-input" value={form.sizes} onChange={(event) => onFormChange({ ...form, sizes: event.target.value })} />
           </Field>
           <Field label="Benefits (comma separated)">
-            <textarea
-              className="admin-input min-h-[84px]"
-              value={form.benefits}
-              onChange={(event) => onFormChange({ ...form, benefits: event.target.value })}
-            />
+            <textarea className="admin-input min-h-[84px]" value={form.benefits} onChange={(event) => onFormChange({ ...form, benefits: event.target.value })} />
           </Field>
           <Field label="How To Use">
-            <textarea
-              className="admin-input min-h-[84px]"
-              value={form.howToUse}
-              onChange={(event) => onFormChange({ ...form, howToUse: event.target.value })}
-              required
-            />
+            <textarea className="admin-input min-h-[84px]" value={form.howToUse} onChange={(event) => onFormChange({ ...form, howToUse: event.target.value })} required />
           </Field>
           <Field label="Safety Instructions">
-            <textarea
-              className="admin-input min-h-[84px]"
-              value={form.safetyInstructions}
-              onChange={(event) =>
-                onFormChange({ ...form, safetyInstructions: event.target.value })
-              }
-              required
-            />
+            <textarea className="admin-input min-h-[84px]" value={form.safetyInstructions} onChange={(event) => onFormChange({ ...form, safetyInstructions: event.target.value })} required />
           </Field>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Checkbox
-              label="Best Seller"
-              checked={form.isBestSeller}
-              onChange={(checked) => onFormChange({ ...form, isBestSeller: checked })}
-            />
-            <Checkbox
-              label="New Arrival"
-              checked={form.isNewArrival}
-              onChange={(checked) => onFormChange({ ...form, isNewArrival: checked })}
-            />
-            <Checkbox
-              label="Active"
-              checked={form.isActive}
-              onChange={(checked) => onFormChange({ ...form, isActive: checked })}
-            />
+            <Checkbox label="Best Seller" checked={form.isBestSeller} onChange={(checked) => onFormChange({ ...form, isBestSeller: checked })} />
+            <Checkbox label="New Arrival" checked={form.isNewArrival} onChange={(checked) => onFormChange({ ...form, isNewArrival: checked })} />
+            <Checkbox label="Active" checked={form.isActive} onChange={(checked) => onFormChange({ ...form, isActive: checked })} />
           </div>
           <div className="flex flex-wrap gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="rounded-2xl bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
-            >
+            <button type="submit" disabled={loading} className="rounded-2xl bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60">
               {editingProduct ? "Update Product" : "Create Product"}
             </button>
-            <button
-              type="button"
-              onClick={onReset}
-              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
+            <button type="button" onClick={onReset} className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
               Reset
             </button>
           </div>
         </form>
-      </Card>
+      </ModalShell>
     </div>
   );
 }
@@ -1444,7 +1449,10 @@ function BrandsPage({
   brands,
   editingBrand,
   form,
+  isModalOpen,
   loading,
+  onCloseModal,
+  onCreate,
   onDelete,
   onEdit,
   onFormChange,
@@ -1452,8 +1460,20 @@ function BrandsPage({
   onSubmit,
 }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
-      <Card title="Brand Management" description="Add, edit, enable, and organize own-brand and partner-brand records.">
+    <div className="space-y-6">
+      <Card
+        title="Brand Management"
+        description="Add, edit, enable, and organize own-brand and partner-brand records."
+        action={
+          <button
+            type="button"
+            onClick={onCreate}
+            className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
+          >
+            Add Brand
+          </button>
+        }
+      >
         <div className="space-y-4">
           {brands.map((brand) => (
             <div
@@ -1519,9 +1539,11 @@ function BrandsPage({
         </div>
       </Card>
 
-      <Card
+      <ModalShell
+        open={isModalOpen}
         title={editingBrand ? "Edit Brand" : "Add Brand"}
         description="Manage brand identity, logo URL, and whether a brand is own-brand or partner-brand."
+        onClose={onCloseModal}
       >
         <form className="space-y-4" onSubmit={onSubmit}>
           <Field label="Brand Name">
@@ -1584,7 +1606,7 @@ function BrandsPage({
             </button>
           </div>
         </form>
-      </Card>
+      </ModalShell>
     </div>
   );
 }
@@ -1593,7 +1615,10 @@ function CategoriesPage({
   categories,
   editingCategory,
   form,
+  isModalOpen,
   loading,
+  onCloseModal,
+  onCreate,
   onDelete,
   onEdit,
   onFormChange,
@@ -1601,8 +1626,20 @@ function CategoriesPage({
   onSubmit,
 }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_0.8fr]">
-      <Card title="Category Management" description="Control category structure and storefront grouping.">
+    <div className="space-y-6">
+      <Card
+        title="Category Management"
+        description="Control category structure and storefront grouping."
+        action={
+          <button
+            type="button"
+            onClick={onCreate}
+            className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
+          >
+            Add Category
+          </button>
+        }
+      >
         <div className="space-y-4">
           {categories.map((category) => (
             <div
@@ -1644,7 +1681,12 @@ function CategoriesPage({
         </div>
       </Card>
 
-      <Card title={editingCategory ? "Edit Category" : "Add Category"} description="Create or update a clean product taxonomy.">
+      <ModalShell
+        open={isModalOpen}
+        title={editingCategory ? "Edit Category" : "Add Category"}
+        description="Create or update a clean product taxonomy."
+        onClose={onCloseModal}
+      >
         <form className="space-y-4" onSubmit={onSubmit}>
           <Field label="Category Name">
             <input
@@ -1691,7 +1733,7 @@ function CategoriesPage({
             </button>
           </div>
         </form>
-      </Card>
+      </ModalShell>
     </div>
   );
 }
@@ -1916,7 +1958,10 @@ function CouponsPage({
   coupons,
   editingCoupon,
   form,
+  isModalOpen,
   loading,
+  onCloseModal,
+  onCreate,
   onDelete,
   onEdit,
   onFormChange,
@@ -1924,8 +1969,20 @@ function CouponsPage({
   onSubmit,
 }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[1fr_0.85fr]">
-      <Card title="Coupon Management" description="Create and manage promotional pricing rules.">
+    <div className="space-y-6">
+      <Card
+        title="Coupon Management"
+        description="Create and manage promotional pricing rules."
+        action={
+          <button
+            type="button"
+            onClick={onCreate}
+            className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
+          >
+            Add Coupon
+          </button>
+        }
+      >
         <div className="space-y-4">
           {coupons.map((coupon) => (
             <div key={coupon.id} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
@@ -1972,7 +2029,12 @@ function CouponsPage({
         </div>
       </Card>
 
-      <Card title={editingCoupon ? "Edit Coupon" : "Create Coupon"} description="Set discount types, conditions, and validity.">
+      <ModalShell
+        open={isModalOpen}
+        title={editingCoupon ? "Edit Coupon" : "Create Coupon"}
+        description="Set discount types, conditions, and validity."
+        onClose={onCloseModal}
+      >
         <form className="space-y-4" onSubmit={onSubmit}>
           <Field label="Coupon Code">
             <input
@@ -2052,69 +2114,44 @@ function CouponsPage({
             </button>
           </div>
         </form>
-      </Card>
+      </ModalShell>
     </div>
   );
 }
 
 function InventoryPage({
   history,
+  isModalOpen,
   loading,
   lowStock,
+  onCloseModal,
   products,
   selectedHistoryProduct,
   stockForm,
   onFormChange,
   onHistoryLoad,
+  onOpenAdjustment,
   onSubmit,
 }) {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <div className="space-y-6">
-        <Card title="Stock Adjustment" description="Manually update available inventory and log movement history.">
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <Field label="Product">
-              <select
-                className="admin-input"
-                value={stockForm.productId}
-                onChange={(event) => onFormChange({ ...stockForm, productId: event.target.value })}
-                required
-              >
-                <option value="">Select product</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Quantity Change">
-              <input
-                type="number"
-                className="admin-input"
-                value={stockForm.quantityChange}
-                onChange={(event) =>
-                  onFormChange({ ...stockForm, quantityChange: event.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label="Remarks">
-              <textarea
-                className="admin-input min-h-[96px]"
-                value={stockForm.remarks}
-                onChange={(event) => onFormChange({ ...stockForm, remarks: event.target.value })}
-                required
-              />
-            </Field>
+        <Card
+          title="Stock Adjustment"
+          description="Open a popup to update inventory without losing sight of your current stock data."
+          action={
             <button
-              type="submit"
-              disabled={loading}
-              className="rounded-2xl bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
+              type="button"
+              onClick={onOpenAdjustment}
+              className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400"
             >
-              Update Stock
+              Adjust Stock
             </button>
-          </form>
+          }
+        >
+          <p className="text-sm leading-7 text-slate-400">
+            Review the low-stock alerts and product history first, then open the stock adjustment form in a popup when you are ready to update inventory.
+          </p>
         </Card>
 
         <Card title="Low Stock Alerts" description="Products that need replenishment first.">
@@ -2173,6 +2210,64 @@ function InventoryPage({
           )}
         </div>
       </Card>
+
+      <ModalShell
+        open={isModalOpen}
+        title="Stock Adjustment"
+        description="Update product stock levels and keep movement history accurate."
+        onClose={onCloseModal}
+      >
+        <form className="space-y-4" onSubmit={onSubmit}>
+          <Field label="Product">
+            <select
+              className="admin-input"
+              value={stockForm.productId}
+              onChange={(event) => onFormChange({ ...stockForm, productId: event.target.value })}
+              required
+            >
+              <option value="">Select product</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Quantity Change">
+            <input
+              type="number"
+              className="admin-input"
+              value={stockForm.quantityChange}
+              onChange={(event) => onFormChange({ ...stockForm, quantityChange: event.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Remarks">
+            <textarea
+              className="admin-input min-h-[96px]"
+              value={stockForm.remarks}
+              onChange={(event) => onFormChange({ ...stockForm, remarks: event.target.value })}
+              required
+            />
+          </Field>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-2xl bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
+            >
+              Update Stock
+            </button>
+            <button
+              type="button"
+              onClick={onCloseModal}
+              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </ModalShell>
     </div>
   );
 }
@@ -2318,6 +2413,35 @@ function SettingsPage({ loading, settings, onChange, onSubmit }) {
         </div>
       </form>
     </Card>
+  );
+}
+
+function ModalShell({ children, description, onClose, open, title }) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-2xl shadow-slate-950/50">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">{title}</h2>
+            {description ? <p className="mt-2 text-sm leading-7 text-slate-400">{description}</p> : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+        <div className="max-h-[calc(92vh-110px)] overflow-y-auto px-6 py-5">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 
