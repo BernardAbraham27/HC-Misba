@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "God Grace Home Products",
+    "slug": "god-grace-home-products",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "godgracehomeproducts",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#f1fff7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.godgrace.homeproducts"
+    },
+    "android": {
+      "package": "com.godgrace.homeproducts",
+      "adaptiveIcon": {
+        "backgroundColor": "#0f6f54"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:5000"
+    }
+  }
+}

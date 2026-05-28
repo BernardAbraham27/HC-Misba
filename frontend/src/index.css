@@ -1,0 +1,104 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(20, 184, 166, 0.12), transparent 24%),
+      radial-gradient(circle at top right, rgba(21, 91, 213, 0.12), transparent 28%),
+      linear-gradient(180deg, #f4f8fc 0%, #ffffff 45%, #eef6ff 100%);
+    color: #10233f;
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: "Fraunces", Georgia, serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  ::selection {
+    background: #bbf7d0;
+    color: #14532d;
+  }
+}
+
+@layer components {
+  .section-shell {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .admin-input {
+    @apply w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:bg-white/10;
+  }
+
+  .customer-input {
+    @apply w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-400;
+  }
+
+  .section-kicker {
+    @apply inline-flex rounded-full border border-emerald-100 bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700 shadow-sm;
+  }
+
+  .section-title {
+    @apply mt-4 text-3xl font-semibold text-slate-900 sm:text-4xl;
+  }
+
+  .section-copy {
+    @apply mt-4 text-sm leading-7 text-slate-600 sm:text-base;
+  }
+
+  .animate-marquee {
+    animation: marquee 25s linear infinite;
+  }
+
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
