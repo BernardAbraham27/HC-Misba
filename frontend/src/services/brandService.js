@@ -1,15 +1,21 @@
-import { defaultBrands, ownBrandName, ownBrandSlug } from "../data/products";
 import { apiRequest } from "./api";
-import { getFallbackBrands } from "./productService";
+import { getBrands as getMasterBrands } from "./masterApi";
 
 function normalizeBrand(brand) {
+  const brandTypeName = brand.brandTypeName || (brand.isOwnBrand ? "Own Brand" : "Partner Brand");
+
   return {
     id: brand.id,
-    name: brand.name || ownBrandName,
-    slug: brand.slug || ownBrandSlug,
-    logoUrl: brand.logoUrl || "",
+    name: brand.name,
+    code: brand.code || "",
+    slug: brand.slug || "",
+    logoUrl: brand.logoUrl || brand.logoPath || "",
+    imageUrl: brand.logoUrl || brand.logoPath || "",
     description: brand.description || "",
-    isOwnBrand: Boolean(brand.isOwnBrand),
+    brandTypeId: brand.brandTypeId || null,
+    brandTypeName,
+    isOwnBrand: Boolean(brand.isOwnBrand ?? brandTypeName === "Own Brand"),
+    badge: brandTypeName,
     isActive: brand.isActive ?? true,
     productCount: Number(brand.productCount || 0),
     createdAt: brand.createdAt,
@@ -17,29 +23,12 @@ function normalizeBrand(brand) {
   };
 }
 
-function findFallbackBrandBySlug(slug) {
-  return getFallbackBrands().find((brand) => brand.slug === slug);
-}
-
 export async function getBrands() {
-  try {
-    const data = await apiRequest("/api/brands");
-    return (data || []).map(normalizeBrand);
-  } catch {
-    return getFallbackBrands().map(normalizeBrand);
-  }
+  return (await getMasterBrands()).map(normalizeBrand);
 }
 
 export async function getBrandBySlug(slug) {
-  try {
-    return normalizeBrand(await apiRequest(`/api/brands/slug/${slug}`));
-  } catch (error) {
-    const fallback = findFallbackBrandBySlug(slug);
-    if (fallback) {
-      return normalizeBrand(fallback);
-    }
-    throw error;
-  }
+  return normalizeBrand(await apiRequest(`/api/brands/slug/${slug}`));
 }
 
 export async function createBrand(data) {
@@ -60,12 +49,8 @@ export async function updateBrand(id, data) {
   );
 }
 
-export async function deleteBrand(id) {
+export function deleteBrand(id) {
   return apiRequest(`/api/brands/${id}`, {
     method: "DELETE",
   });
-}
-
-export function getFallbackBrandCards() {
-  return defaultBrands.map(normalizeBrand);
 }

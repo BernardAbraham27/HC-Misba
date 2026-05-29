@@ -5,8 +5,15 @@ import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import AppNavigator from "./navigation/AppNavigator";
+import { hydrateMasters, loadAllMasters } from "./store/masterStore";
 
 export default function App() {
+  React.useEffect(() => {
+    hydrateMasters().finally(() => {
+      loadAllMasters().catch(() => {});
+    });
+  }, []);
+
   return (
     <SafeAreaProvider>
       <AuthProvider>

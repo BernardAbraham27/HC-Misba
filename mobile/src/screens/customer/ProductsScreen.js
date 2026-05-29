@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -13,19 +13,28 @@ import { Ionicons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useCart } from "../../context/CartContext";
 import { getProductsByBrandType } from "../../data/products";
+import { getMasterState, subscribeMasters } from "../../store/masterStore";
 import colors from "../../theme/colors";
-
-const FILTERS = [
-  { label: "All", value: "All" },
-  { label: "Our Brands", value: "Own Brand" },
-  { label: "Third-Party", value: "Third-Party" },
-];
 
 export default function ProductsScreen({ navigation, route }) {
   const { addToCart } = useCart();
+  const [masterState, setMasterState] = useState(() => getMasterState());
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchText, setSearchText] = useState("");
   const screenMode = route?.params?.screenMode || "categories";
+
+  useEffect(() => subscribeMasters(setMasterState), []);
+
+  const filters = useMemo(
+    () => [
+      { label: "All", value: "All" },
+      ...(masterState.brandTypes || []).map((item) => ({
+        label: item.name,
+        value: item.name,
+      })),
+    ],
+    [masterState.brandTypes],
+  );
 
   const products = useMemo(() => {
     const filtered = getProductsByBrandType(selectedFilter);
@@ -70,7 +79,7 @@ export default function ProductsScreen({ navigation, route }) {
         </View>
 
         <View style={styles.filterRow}>
-          {FILTERS.map((filter) => {
+          {filters.map((filter) => {
             const active = selectedFilter === filter.value;
             return (
               <Animated.View key={filter.value} style={{ transform: [{ scale: active ? 1.03 : 1 }] }}>

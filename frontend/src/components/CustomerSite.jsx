@@ -3,11 +3,9 @@ import Footer from "./Footer";
 import Header from "./Header";
 import MobileBottomNav from "./MobileBottomNav";
 import { CubeIcon, ShieldIcon, SparklesIcon, TruckIcon } from "./IconSet";
-import { shopCategories } from "../data/categories";
 import {
   allProducts,
   contactDetails,
-  defaultBrands,
   faqs,
   heroSlides,
   navLinks,
@@ -26,6 +24,7 @@ import { tickerItems } from "../data/tickerItems";
 import { useAuth } from "../context/AuthContext";
 import { addToCart, getCartCount, onCartUpdated } from "../services/cartService";
 import { getProducts } from "../services/productService";
+import { useMasterStore } from "../store/masterStore";
 
 const trustBadges = [
   { label: "Quality Products", icon: ShieldIcon },
@@ -138,6 +137,8 @@ export default function CustomerSite({ onNavigate, setToast }) {
   const [cartCount, setCartCount] = useState(() => getCartCount());
   const [catalogProducts, setCatalogProducts] = useState(allProducts);
   const [verseLang, setVerseLang] = useState("en");
+  const brands = useMasterStore((snapshot) => snapshot.brands);
+  const masterCategories = useMasterStore((snapshot) => snapshot.categories);
   const hero = heroSlides[0];
 
   useEffect(() => {
@@ -202,9 +203,24 @@ export default function CustomerSite({ onNavigate, setToast }) {
     [catalogProducts],
   );
 
-  const ourBrands = defaultBrands.filter((brand) => ["MISPA", "RAINBOW"].includes(brand.name));
-  const partnerBrands = defaultBrands.filter((brand) => ["CLEANBOY", "Easy Clean"].includes(brand.name));
+  const normalizedBrands = brands.map((brand) => ({
+    ...brand,
+    imageUrl: brand.logoUrl || brand.logoPath || "",
+    slug: brand.slug || brand.code?.toLowerCase().replace(/_/g, "-") || "",
+    badge: brand.brandTypeName || "Partner Brand",
+    isOwnBrand: (brand.brandTypeName || "").toLowerCase() === "own brand",
+  }));
+  const ourBrands = normalizedBrands.filter((brand) => brand.isOwnBrand);
+  const partnerBrands = normalizedBrands.filter((brand) => !brand.isOwnBrand);
   const featuredProducts = filteredProducts.slice(0, 8);
+  const categories = masterCategories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    description: category.description,
+    imageUrl:
+      catalogProducts.find((product) => product.category === category.name)?.imageUrl ||
+      "/assets/images/brands/god-grace-logo.png",
+  }));
 
   const headerNavLinks = isAdmin
     ? [
@@ -378,7 +394,16 @@ export default function CustomerSite({ onNavigate, setToast }) {
             {ourBrands.map((brand) => (
               <article
                 key={brand.id}
-                className="rounded-[2rem] border border-[#DCE8F5] bg-white p-6 shadow-[0_16px_42px_rgba(16,35,63,0.08)]"
+                role="button"
+                tabIndex={0}
+                onClick={() => onNavigate(`/products?brand=${brand.slug}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onNavigate(`/products?brand=${brand.slug}`);
+                  }
+                }}
+                className="rounded-[2rem] border border-[#DCE8F5] bg-white p-6 text-left shadow-[0_16px_42px_rgba(16,35,63,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_52px_rgba(16,35,63,0.12)] focus:outline-none focus:ring-2 focus:ring-[#155BD5]/30"
               >
                 <div className="flex items-center gap-5">
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#EEF6FF] p-4">
@@ -390,6 +415,7 @@ export default function CustomerSite({ onNavigate, setToast }) {
                     </span>
                     <h3 className="mt-3 text-2xl font-semibold text-[#10233F]">{brand.name}</h3>
                     <p className="mt-2 text-sm leading-7 text-[#6B7C93]">{brand.description}</p>
+                    <p className="mt-3 text-sm font-semibold text-[#155BD5]">View products</p>
                   </div>
                 </div>
               </article>
@@ -407,7 +433,16 @@ export default function CustomerSite({ onNavigate, setToast }) {
             {partnerBrands.map((brand) => (
               <article
                 key={brand.id}
-                className="rounded-[2rem] border border-[#DCE8F5] bg-white p-6 shadow-[0_16px_42px_rgba(16,35,63,0.08)]"
+                role="button"
+                tabIndex={0}
+                onClick={() => onNavigate(`/products?brand=${brand.slug}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onNavigate(`/products?brand=${brand.slug}`);
+                  }
+                }}
+                className="rounded-[2rem] border border-[#DCE8F5] bg-white p-6 text-left shadow-[0_16px_42px_rgba(16,35,63,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_52px_rgba(16,35,63,0.12)] focus:outline-none focus:ring-2 focus:ring-[#155BD5]/30"
               >
                 <div className="flex items-center gap-5">
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[#EEF6FF] p-4">
@@ -425,6 +460,7 @@ export default function CustomerSite({ onNavigate, setToast }) {
                     </span>
                     <h3 className="mt-3 text-2xl font-semibold text-[#10233F]">{brand.name}</h3>
                     <p className="mt-2 text-sm leading-7 text-[#6B7C93]">{brand.description}</p>
+                    <p className="mt-3 text-sm font-semibold text-[#155BD5]">View products</p>
                   </div>
                 </div>
               </article>
@@ -457,11 +493,11 @@ export default function CustomerSite({ onNavigate, setToast }) {
             copy="A tighter category list keeps the storefront focused on the exact household and business cleaning products in the current catalog."
           />
           <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {shopCategories.map((category) => (
+            {categories.map((category) => (
               <button
                 key={category.id}
                 type="button"
-                onClick={() => onNavigate("/products")}
+                onClick={() => onNavigate(`/products?categoryId=${category.id}`)}
                 className="rounded-[1.8rem] border border-[#DCE8F5] bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="flex h-44 items-center justify-center rounded-[1.3rem] bg-[linear-gradient(180deg,#f8fbff_0%,#eef6ff_100%)] p-4">
@@ -649,7 +685,7 @@ export default function CustomerSite({ onNavigate, setToast }) {
 
       <Footer
         navLinks={navLinks}
-        categories={shopCategories.map((category) => category.name)}
+        categories={categories.map((category) => category.name)}
         contactDetails={contactDetails}
         socialLinks={socialLinks}
         onNavigate={onNavigate}

@@ -19,6 +19,7 @@ import { useAuth } from "./context/AuthContext";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import ProfilePage from "./pages/customer/ProfilePage";
 import WishlistPage from "./pages/customer/WishlistPage";
+import { loadAllMasters } from "./store/masterStore";
 
 const customerProtectedRoutes = new Set([
   "/customer/dashboard",
@@ -43,13 +44,19 @@ function scrollToHash(hash) {
 
 export default function App() {
   const [pathname, setPathname] = useState(window.location.pathname);
+  const [search, setSearch] = useState(window.location.search);
   const [pendingHash, setPendingHash] = useState(window.location.hash);
   const [toast, setToast] = useState(null);
   const auth = useAuth();
 
   useEffect(() => {
+    loadAllMasters().catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const handlePopState = () => {
       setPathname(window.location.pathname);
+      setSearch(window.location.search);
       setPendingHash(window.location.hash);
     };
 
@@ -102,23 +109,46 @@ export default function App() {
     if (!to) return;
 
     const currentPath = window.location.pathname;
+    const currentSearch = window.location.search;
     let nextPath = currentPath;
+    let nextSearch = "";
     let nextHash = "";
 
     if (to.startsWith("#")) {
       nextHash = to;
     } else {
-      const hashIndex = to.indexOf("#");
-      if (hashIndex >= 0) {
-        nextPath = to.slice(0, hashIndex) || currentPath;
-        nextHash = to.slice(hashIndex);
-      } else {
-        nextPath = to;
+      const [pathAndSearch, hashPart = ""] = to.split("#");
+      const [pathPart, searchPart = ""] = pathAndSearch.split("?");
+
+      if (pathPart) {
+        nextPath = pathPart;
+      }
+
+      nextSearch = searchPart ? `?${searchPart}` : "";
+
+      if (hashPart) {
+        nextHash = `#${hashPart}`;
+      } else if (!pathAndSearch && hashPart) {
+        nextHash = `#${hashPart}`;
+      }
+
+      if (!pathPart && !searchPart && hashPart) {
+        nextPath = currentPath;
+      } else if (!pathPart && searchPart) {
+        nextPath = currentPath;
       }
     }
 
-    const nextUrl = `${nextPath}${nextHash}`;
-    if (window.location.pathname !== nextPath || window.location.hash !== nextHash) {
+    if (to.startsWith("#")) {
+      nextSearch = currentSearch;
+    }
+
+    const nextUrl = `${nextPath}${nextSearch}${nextHash}`;
+    if (
+      window.location.pathname !== nextPath ||
+      window.location.search !== nextSearch ||
+      window.location.hash !== nextHash
+    ) {
       if (replace) {
         window.history.replaceState({}, "", nextUrl);
       } else {
@@ -127,6 +157,7 @@ export default function App() {
     }
 
     setPathname(nextPath);
+    setSearch(nextSearch);
     setPendingHash(nextHash);
 
     if (!nextHash) {
@@ -176,7 +207,7 @@ export default function App() {
   if (pathname === "/products") {
     return (
       <>
-        <ProductsPage onNavigate={navigate} setToast={setToast} />
+        <ProductsPage onNavigate={navigate} setToast={setToast} locationSearch={search} />
         <AuthToast toast={toast} />
       </>
     );

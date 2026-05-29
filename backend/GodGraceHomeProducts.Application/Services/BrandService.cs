@@ -30,10 +30,13 @@ public class BrandService(IAppDbContext db) : IBrandService
         var brand = new Brand
         {
             Name = request.Name.Trim(),
+            Code = string.IsNullOrWhiteSpace(request.Code) ? SlugHelper.Generate(request.Name).Replace("-", "_").ToUpperInvariant() : request.Code.Trim().Replace(" ", "_").ToUpperInvariant(),
             Slug = await UniqueSlugAsync(request.Name, request.Slug),
+            BrandTypeId = request.BrandTypeId ?? (request.IsOwnBrand ? 1 : 3),
             LogoUrl = request.LogoUrl?.Trim(),
             Description = request.Description.Trim(),
-            IsOwnBrand = request.IsOwnBrand,
+            IsOwnBrand = (request.BrandTypeId ?? (request.IsOwnBrand ? 1 : 3)) == 1,
+            DisplayOrder = request.DisplayOrder,
             IsActive = request.IsActive
         };
 
@@ -48,10 +51,13 @@ public class BrandService(IAppDbContext db) : IBrandService
             ?? throw new KeyNotFoundException("Brand not found.");
 
         brand.Name = request.Name.Trim();
+        brand.Code = string.IsNullOrWhiteSpace(request.Code) ? SlugHelper.Generate(request.Name).Replace("-", "_").ToUpperInvariant() : request.Code.Trim().Replace(" ", "_").ToUpperInvariant();
         brand.Slug = await UniqueSlugAsync(request.Name, request.Slug, id);
+        brand.BrandTypeId = request.BrandTypeId ?? (request.IsOwnBrand ? 1 : brand.BrandTypeId);
         brand.LogoUrl = request.LogoUrl?.Trim();
         brand.Description = request.Description.Trim();
-        brand.IsOwnBrand = request.IsOwnBrand;
+        brand.IsOwnBrand = brand.BrandTypeId == 1;
+        brand.DisplayOrder = request.DisplayOrder;
         brand.IsActive = request.IsActive;
         brand.UpdatedAt = DateTime.UtcNow;
 
@@ -74,7 +80,7 @@ public class BrandService(IAppDbContext db) : IBrandService
     }
 
     private IQueryable<Brand> QueryBase()
-        => db.Brands.Include(x => x.Products).AsQueryable();
+        => db.Brands.Include(x => x.BrandType).Include(x => x.Products).AsQueryable();
 
     private async Task<string> UniqueSlugAsync(string name, string slug, int? id = null)
     {
@@ -94,10 +100,14 @@ public class BrandService(IAppDbContext db) : IBrandService
     {
         Id = brand.Id,
         Name = brand.Name,
+        Code = brand.Code,
         Slug = brand.Slug,
+        BrandTypeId = brand.BrandTypeId,
+        BrandTypeName = brand.BrandType?.Name ?? (brand.IsOwnBrand ? "Own Brand" : "Partner Brand"),
         LogoUrl = brand.LogoUrl,
         Description = brand.Description,
         IsOwnBrand = brand.IsOwnBrand,
+        DisplayOrder = brand.DisplayOrder,
         IsActive = brand.IsActive,
         ProductCount = brand.Products.Count(product => product.IsActive && !product.IsDeleted),
         CreatedAt = brand.CreatedAt,

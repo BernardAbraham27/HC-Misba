@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import StoreShell from "./StoreShell";
 import StoreProductCard from "./StoreProductCard";
-import { ownBrandName, toStorefrontProduct } from "../data/products";
+import { toStorefrontProduct } from "../data/products";
 import { getBrands } from "../services/brandService";
 import { addToCart } from "../services/cartService";
 import { getCategories, getProducts } from "../services/productService";
+import { useMasterStore } from "../store/masterStore";
 
 function FilterChip({ active, children, onClick }) {
   return (
@@ -22,7 +23,7 @@ function FilterChip({ active, children, onClick }) {
   );
 }
 
-export default function ProductsPage({ onNavigate, setToast }) {
+export default function ProductsPage({ locationSearch = "", onNavigate, setToast }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -30,21 +31,20 @@ export default function ProductsPage({ onNavigate, setToast }) {
   const [searchInput, setSearchInput] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [brandFilter, setBrandFilter] = useState("all");
+  const [brandTypeFilter, setBrandTypeFilter] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const brandTypeOptions = useMasterStore((snapshot) => snapshot.brandTypes);
+
+  useEffect(() => {
+    const params = new URLSearchParams(locationSearch);
+    setBrandFilter(params.get("brand") || "all");
+  }, [locationSearch]);
 
   const brandQuery = useMemo(() => {
-    if (brandFilter === "own-brand") {
-      return { isOwnBrand: true };
-    }
-
-    if (brandFilter === "third-party") {
-      return { brandSlug: "cleanboy" };
-    }
-
-    if (brandFilter === "partner-brand") {
-      return { brandSlug: "easy-clean" };
+    if (brandFilter !== "all") {
+      return { brandSlug: brandFilter };
     }
 
     return {};
@@ -61,19 +61,29 @@ export default function ProductsPage({ onNavigate, setToast }) {
     [brandQuery, categoryId, searchTerm, sortBy],
   );
 
-  const ownBrand = useMemo(
-    () => brands.find((brand) => brand.isOwnBrand) || null,
+  const brandTypes = useMemo(
+    () => [{ value: "all", label: "All Brands" }].concat(
+      brands.map((brand) => ({
+        value: brand.slug,
+        label: brand.name,
+      })),
+    ),
     [brands],
   );
 
-  const brandTypes = useMemo(
-    () => [
-      { value: "all", label: "All" },
-      { value: "own-brand", label: "Own Brand" },
-      { value: "third-party", label: "Third-Party" },
-      { value: "partner-brand", label: "Partner Brand" },
-    ],
-    [brands],
+  const selectedBrand = useMemo(
+    () => brands.find((brand) => brand.slug === brandFilter) || null,
+    [brandFilter, brands],
+  );
+
+  const visibleProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        brandTypeFilter === "all"
+          ? true
+          : String(product.brandTypeId) === String(brandTypeFilter),
+      ),
+    [brandTypeFilter, products],
   );
 
   useEffect(() => {
@@ -133,9 +143,13 @@ export default function ProductsPage({ onNavigate, setToast }) {
       <section className="section-shell py-12">
         <div className="rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-sm sm:p-8">
           <span className="section-kicker">All Products</span>
-          <h1 className="mt-4 text-4xl font-semibold text-slate-900">Browse Products by Brand</h1>
+          <h1 className="mt-4 text-4xl font-semibold text-slate-900">
+            {selectedBrand ? `${selectedBrand.name} Products` : "Browse Products by Brand"}
+          </h1>
           <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-            Search by product name and filter by category or brand ownership to browse the current MISPA, RAINBOW, CLEANBOY, and Easy Clean lineup.
+            {selectedBrand
+              ? `Showing products for ${selectedBrand.name}. You can search within this brand or switch to another brand below.`
+              : "Search by product name and filter by category or brand to browse the full God Grace Home Products lineup."}
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-4">
@@ -188,11 +202,25 @@ export default function ProductsPage({ onNavigate, setToast }) {
               <FilterChip
                 key={brandType.value}
                 active={brandFilter === brandType.value}
-                onClick={() => setBrandFilter(brandType.value)}
+                onClick={() => onNavigate(brandType.value === "all" ? "/products" : `/products?brand=${brandType.value}`)}
               >
                 {brandType.label}
               </FilterChip>
             ))}
+          </div>
+          <div className="mt-4">
+            <select
+              value={brandTypeFilter}
+              onChange={(event) => setBrandTypeFilter(event.target.value)}
+              className="customer-input max-w-[240px]"
+            >
+              <option value="all">All Brand Types</option>
+              {brandTypeOptions.map((brandType) => (
+                <option key={brandType.id} value={brandType.id}>
+                  {brandType.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -204,9 +232,9 @@ export default function ProductsPage({ onNavigate, setToast }) {
           <div className="mt-10 rounded-[2rem] border border-rose-200 bg-rose-50 p-10 text-center text-sm text-rose-700 shadow-sm">
             {error}
           </div>
-        ) : products.length ? (
+        ) : visibleProducts.length ? (
           <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-            {products.map((product) => {
+            {visibleProducts.map((product) => {
               const storefrontProduct = toStorefrontProduct(product);
 
               return (

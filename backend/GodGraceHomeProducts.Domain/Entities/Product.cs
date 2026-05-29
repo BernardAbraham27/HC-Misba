@@ -10,6 +10,10 @@ public class Product : BaseEntity
     public Brand? Brand { get; set; }
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
+    public int? ProductSizeMasterId { get; set; }
+    public ProductSizeMaster? ProductSizeMaster { get; set; }
+    public int? ProductStatusId { get; set; }
+    public ProductStatusMaster? ProductStatus { get; set; }
     public string ShortDescription { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }

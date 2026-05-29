@@ -11,7 +11,7 @@ public class ProductService(IAppDbContext db) : IProductService
 {
     public async Task<PagedResult<ProductResponseDto>> GetProductsAsync(ProductListQueryDto query)
     {
-        var q = db.Products.Include(x => x.Brand).Include(x => x.Category).Include(x => x.Sizes).Include(x => x.Benefits)
+        var q = db.Products.Include(x => x.Brand).ThenInclude(x => x.BrandType).Include(x => x.Category).Include(x => x.ProductSizeMaster).Include(x => x.ProductStatus).Include(x => x.Sizes).Include(x => x.Benefits)
             .Where(x => x.IsActive && !x.IsDeleted).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -73,12 +73,16 @@ public class ProductService(IAppDbContext db) : IProductService
     {
         await EnsureCategoryAsync(request.CategoryId);
         await EnsureBrandAsync(request.BrandId);
+        var productSizeId = await ResolveProductSizeIdAsync(request);
+        var productStatusId = await ResolveProductStatusIdAsync(request);
         var entity = new Product
         {
             Name = request.Name.Trim(),
             Slug = await UniqueSlugAsync(request.Name.Trim()),
             BrandId = request.BrandId,
             CategoryId = request.CategoryId,
+            ProductSizeMasterId = productSizeId,
+            ProductStatusId = productStatusId,
             ShortDescription = request.ShortDescription.Trim(),
             Description = request.Description.Trim(),
             Price = request.Price,
@@ -110,6 +114,8 @@ public class ProductService(IAppDbContext db) : IProductService
         entity.Slug = await UniqueSlugAsync(entity.Name, id);
         entity.BrandId = request.BrandId;
         entity.CategoryId = request.CategoryId;
+        entity.ProductSizeMasterId = await ResolveProductSizeIdAsync(request);
+        entity.ProductStatusId = await ResolveProductStatusIdAsync(request);
         entity.ShortDescription = request.ShortDescription.Trim();
         entity.Description = request.Description.Trim();
         entity.Price = request.Price;
@@ -141,7 +147,7 @@ public class ProductService(IAppDbContext db) : IProductService
         await db.SaveChangesAsync();
     }
 
-    private IQueryable<Product> QueryBase() => db.Products.Include(x => x.Brand).Include(x => x.Category).Include(x => x.Sizes).Include(x => x.Benefits)
+    private IQueryable<Product> QueryBase() => db.Products.Include(x => x.Brand).ThenInclude(x => x.BrandType).Include(x => x.Category).Include(x => x.ProductSizeMaster).Include(x => x.ProductStatus).Include(x => x.Sizes).Include(x => x.Benefits)
         .Where(x => x.IsActive && !x.IsDeleted);
 
     private async Task EnsureCategoryAsync(int categoryId)
@@ -154,6 +160,36 @@ public class ProductService(IAppDbContext db) : IProductService
     {
         if (!await db.Brands.AnyAsync(x => x.Id == brandId && x.IsActive))
             throw new InvalidOperationException("Selected brand does not exist.");
+    }
+
+    private async Task<int?> ResolveProductSizeIdAsync(ProductRequestDto request)
+    {
+        if (request.SizeId.HasValue)
+        {
+            return request.SizeId.Value;
+        }
+
+        var sizeName = request.Sizes.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(sizeName))
+        {
+            return null;
+        }
+
+        return await db.ProductSizeMasters
+            .Where(x => x.Name.ToLower() == sizeName.Trim().ToLower())
+            .Select(x => (int?)x.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    private async Task<int?> ResolveProductStatusIdAsync(ProductRequestDto request)
+    {
+        if (request.ProductStatusId.HasValue)
+        {
+            return request.ProductStatusId.Value;
+        }
+
+        var code = request.IsActive ? "ACTIVE" : "INACTIVE";
+        return await db.ProductStatuses.Where(x => x.Code == code).Select(x => (int?)x.Id).FirstOrDefaultAsync();
     }
 
     private async Task<string> UniqueSlugAsync(string name, int? id = null)
@@ -174,9 +210,15 @@ public class ProductService(IAppDbContext db) : IProductService
         BrandId = x.BrandId,
         BrandName = x.Brand?.Name ?? string.Empty,
         BrandSlug = x.Brand?.Slug ?? string.Empty,
+        BrandTypeId = x.Brand?.BrandTypeId ?? 0,
+        BrandTypeName = x.Brand?.BrandType?.Name ?? string.Empty,
         IsOwnBrand = x.Brand?.IsOwnBrand ?? false,
         CategoryId = x.CategoryId,
         CategoryName = x.Category?.Name ?? string.Empty,
+        SizeId = x.ProductSizeMasterId,
+        SizeName = x.ProductSizeMaster?.Name ?? x.Sizes.Select(s => s.Size).FirstOrDefault() ?? string.Empty,
+        ProductStatusId = x.ProductStatusId,
+        ProductStatusName = x.ProductStatus?.Name ?? (x.IsActive ? "Active" : "Inactive"),
         ShortDescription = x.ShortDescription,
         Description = x.Description,
         Price = x.Price,

@@ -26,6 +26,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IMasterService, MasterService>();
 
         return services;
     }

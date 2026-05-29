@@ -30,9 +30,11 @@ public class CategoryService(IAppDbContext db) : ICategoryService
         var category = new Category
         {
             Name = request.Name.Trim(),
+            Code = string.IsNullOrWhiteSpace(request.Code) ? slug.Replace("-", "_").ToUpperInvariant() : request.Code.Trim().Replace(" ", "_").ToUpperInvariant(),
             Slug = slug,
             Description = request.Description.Trim(),
             ImageUrl = request.ImageUrl?.Trim(),
+            DisplayOrder = request.DisplayOrder,
             IsActive = request.IsActive
         };
         db.Categories.Add(category);
@@ -51,9 +53,11 @@ public class CategoryService(IAppDbContext db) : ICategoryService
         }
 
         category.Name = request.Name.Trim();
+        category.Code = string.IsNullOrWhiteSpace(request.Code) ? slug.Replace("-", "_").ToUpperInvariant() : request.Code.Trim().Replace(" ", "_").ToUpperInvariant();
         category.Slug = slug;
         category.Description = request.Description.Trim();
         category.ImageUrl = request.ImageUrl?.Trim();
+        category.DisplayOrder = request.DisplayOrder;
         category.IsActive = request.IsActive;
         category.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
@@ -79,9 +83,11 @@ public class CategoryService(IAppDbContext db) : ICategoryService
     {
         Id = x.Id,
         Name = x.Name,
+        Code = x.Code,
         Slug = x.Slug,
         Description = x.Description,
         ImageUrl = x.ImageUrl,
+        DisplayOrder = x.DisplayOrder,
         IsActive = x.IsActive,
         ProductCount = x.Products.Count(p => p.IsActive && !p.IsDeleted)
     };

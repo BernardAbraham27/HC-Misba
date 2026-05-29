@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { featuredProducts, ownBrandProducts, partnerBrands, ourBrands } from "../../data/products";
 import { useCart } from "../../context/CartContext";
+import { getMasterState, subscribeMasters } from "../../store/masterStore";
 import colors from "../../theme/colors";
 
 const homeBanner = require("../../../assets/images/banners/home-banner.png");
@@ -30,9 +31,17 @@ function BrandRow({ title, data }) {
       >
         {data.map((brand) => (
           <View key={brand.id} style={styles.brandCard}>
-            <Image source={brand.logo} style={styles.brandLogo} resizeMode="contain" />
+            <Image
+              source={
+                brand.logo
+                  ? brand.logo
+                  : { uri: brand.logoUrl || brand.logoPath || brand.imageUrl }
+              }
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.brandName}>{brand.name}</Text>
-            <Text style={styles.brandType}>{brand.type}</Text>
+            <Text style={styles.brandType}>{brand.brandTypeName || brand.type}</Text>
           </View>
         ))}
       </ScrollView>
@@ -42,8 +51,11 @@ function BrandRow({ title, data }) {
 
 export default function CustomerDashboardScreen({ navigation }) {
   const { addToCart } = useCart();
+  const [masterState, setMasterState] = useState(() => getMasterState());
   const bannerOpacity = useRef(new Animated.Value(0)).current;
   const bannerShift = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => subscribeMasters(setMasterState), []);
 
   useEffect(() => {
     Animated.parallel([
@@ -59,6 +71,20 @@ export default function CustomerDashboardScreen({ navigation }) {
       }),
     ]).start();
   }, [bannerOpacity, bannerShift]);
+
+  const mobileBrands = useMemo(() => {
+    const normalized = (masterState.brands || []).map((brand) => ({
+      ...brand,
+      imageUrl: brand.logoUrl || brand.logoPath || "",
+      brandTypeName: brand.brandTypeName || "",
+      isOwnBrand: (brand.brandTypeName || "").toLowerCase() === "own brand",
+    }));
+
+    return {
+      our: normalized.filter((brand) => brand.isOwnBrand),
+      partner: normalized.filter((brand) => !brand.isOwnBrand),
+    };
+  }, [masterState.brands]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -118,8 +144,8 @@ export default function CustomerDashboardScreen({ navigation }) {
           </ImageBackground>
         </Animated.View>
 
-        <BrandRow title="Our Brands" data={ourBrands} />
-        <BrandRow title="Partner Brands" data={partnerBrands} />
+        <BrandRow title="Our Brands" data={mobileBrands.our.length ? mobileBrands.our : ourBrands} />
+        <BrandRow title="Partner Brands" data={mobileBrands.partner.length ? mobileBrands.partner : partnerBrands} />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
